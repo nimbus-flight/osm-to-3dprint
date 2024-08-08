@@ -18,3 +18,7 @@ bbox = "37.7749,-122.4194,37.8049,-122.3894"  # San Francisco example
 ```python3 main.py```
 
 
+## sample of San Francisco in Bambu Studio
+![image](https://github.com/user-attachments/assets/47d082ec-26f0-4698-87a6-0d0c1606c6bf)
+
+
