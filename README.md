@@ -7,11 +7,14 @@ Export Open Street Map tiles, convert to OBJ for importing to 3D slicing softwar
 This library depends on osm, overpass-api, osmnx
 
 ## sample usage
-input gps coordinates for bounding box
+change gps coordinates for bounding box
 
 ```
 # Example bounding box: min_lat, min_lon, max_lat, max_lon
 bbox = "37.7749,-122.4194,37.8049,-122.3894"  # San Francisco example
 ```
+
+## change target_size, max_height, and base thickness parameters
+```python3 main.py```
 
 
