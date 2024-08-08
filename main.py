@@ -81,8 +81,8 @@ def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_heig
 
             # Create vertices
             for coord in exterior_coords:
-                v_bottom = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, 0)
-                v_top = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, height)
+                v_bottom = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, -base_thickness)
+                v_top = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, height - base_thickness)
                 # Center buildings on the base
                 v_bottom = (v_bottom[0] + (center_x - (target_size / 2)), v_bottom[1] + (center_y - (target_size / 2)), v_bottom[2])
                 v_top = (v_top[0] + (center_x - (target_size / 2)), v_top[1] + (center_y - (target_size / 2)), v_top[2])
