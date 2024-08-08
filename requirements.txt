@@ -1,1 +1,5 @@
+osmnx 
 requests
+shapely 
+trimesh 
+numpy-stl
