@@ -10,6 +10,24 @@ def fetch_building_data(bbox):
     gdf = ox.geometries_from_bbox(north, south, east, west, tags={'building': True})
     return gdf
 
+def get_building_height(row, default_height=10):
+    # Check for various height attributes
+    height_attrs = ['height', 'building:height', 'building:levels']
+    for attr in height_attrs:
+        if attr in row:
+            height = row[attr]
+            if isinstance(height, (int, float)) and not np.isnan(height):
+                if attr == 'building:levels':
+                    return height * 3  # Assuming 3 meters per level
+                return height
+            elif isinstance(height, str):
+                try:
+                    height_value = float(height.replace('m', '').strip())
+                    return height_value
+                except ValueError:
+                    continue
+    return default_height
+
 def scale_coordinates(gdf, bbox, target_size=200, default_height=10):
     # Calculate the scale factors for x and y dimensions
     north, south, east, west = bbox
@@ -20,26 +38,42 @@ def scale_coordinates(gdf, bbox, target_size=200, default_height=10):
 
     vertices = []
     faces = []
-    for polygon in gdf['geometry']:
+    for idx, row in gdf.iterrows():
+        polygon = row['geometry']
         if isinstance(polygon, shapely.geometry.Polygon):
-            exterior_coords = polygon.exterior.coords
+            exterior_coords = list(polygon.exterior.coords)
             base_index = len(vertices)
+
+            # Determine height
+            height = get_building_height(row, default_height)
+            print(f"Building at index {idx} with coordinates {exterior_coords} has height {height}")
+
+            # Create vertices
+            for coord in exterior_coords:
+                v_bottom = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, 0)
+                v_top = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, height)
+                vertices.extend([v_bottom, v_top])
+
+            # Create side faces
             for i in range(len(exterior_coords) - 1):
-                v0 = exterior_coords[i]
-                v1 = exterior_coords[(i + 1) % len(exterior_coords)]
-                # Scale the coordinates
-                v0_3d = ((v0[0] - west) * scale_x, (v0[1] - south) * scale_y, 0)
-                v1_3d = ((v1[0] - west) * scale_x, (v1[1] - south) * scale_y, 0)
-                height = default_height if 'building:levels' not in gdf else gdf['building:levels'].get(polygon, default_height) * 3  # Assuming 3 meters per level
-                v0_3d_top = (v0_3d[0], v0_3d[1], height)
-                v1_3d_top = (v1_3d[0], v1_3d[1], height)
-                vertices.extend([v0_3d, v1_3d, v0_3d_top, v1_3d_top])
+                bottom1 = base_index + 2 * i
+                bottom2 = base_index + 2 * (i + 1)
+                top1 = base_index + 2 * i + 1
+                top2 = base_index + 2 * (i + 1) + 1
 
-                # Side faces
-                faces.append([base_index, base_index + 1, base_index + 2])
-                faces.append([base_index + 2, base_index + 1, base_index + 3])
+                faces.append([bottom1, bottom2, top1])
+                faces.append([top1, bottom2, top2])
 
-                base_index += 4
+            # Create top face
+            top_face_indices = [base_index + 2 * i + 1 for i in range(len(exterior_coords) - 1)]
+            for i in range(1, len(top_face_indices) - 1):
+                faces.append([top_face_indices[0], top_face_indices[i], top_face_indices[i + 1]])
+
+            # Create bottom face
+            bottom_face_indices = [base_index + 2 * i for i in range(len(exterior_coords) - 1)]
+            for i in range(1, len(bottom_face_indices) - 1):
+                faces.append([bottom_face_indices[0], bottom_face_indices[i], bottom_face_indices[i + 1]])
+
     vertices = np.array(vertices)
     faces = np.array(faces)
     return vertices, faces
