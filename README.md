@@ -1,5 +1,9 @@
 # osm-to-3dprint
 Export OpenStreetMap (OSM) tiles, convert them to STL format, and import them directly into your 3D slicing software.
+- building height data may be missing in certain cities, so check for other height attributes in the osm data
+```# Check for various height attributes
+    height_attrs = ['height', 'building:height', 'building:levels']
+```
 
 # Benefits
 - free for commercial usage (MIT License)
@@ -37,5 +41,11 @@ Run the script:
 ## Example Output
 Here's a sample of San Francisco visualized in Bambu Studio:
 ![image](https://github.com/user-attachments/assets/b2848b87-9a34-4516-8917-a705d83344de)
+
+Here's a sample of Atlanta in Bambu Studio:
+![image](https://github.com/user-attachments/assets/55f8ac1b-bebc-494c-bbed-70046e66721e)
+
+Here's a sample of Manhatten, New York:
+![image](https://github.com/user-attachments/assets/133c14f6-c28a-405a-aff1-3ff5dd9de01e)
 
 
