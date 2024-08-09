@@ -4,6 +4,8 @@ Export OpenStreetMap (OSM) tiles, convert them to STL format, and import them di
 ```# Check for various height attributes
     height_attrs = ['height', 'building:height', 'building:levels']
 ```
+- Support the project by buying a 3D print from [Plan3DPrint.com](https://plan3dprint.com/)!
+
 
 # Benefits
 - free for commercial usage (MIT License)
