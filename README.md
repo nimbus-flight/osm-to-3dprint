@@ -29,6 +29,8 @@ Adjust the GPS coordinates to define the bounding box of the area you wish to ex
 ```
 # Example bounding box: min_lat, min_lon, max_lat, max_lon
 bbox = (37.8049, 37.7749, -122.3894, -122.4194)  # San Francisco example
+bbox = (33.7756, 33.7405, -84.3790, -84.4156)  # Approximate bounding box for downtown Atlanta
+bbox = (40.9176, 40.7003, -73.9067, -74.0122)  # Approximate bounding box for Manhattan, New York
 ```
 
 You can also modify parameters like target_size, max_height, and base_thickness to customize the export.
