@@ -27,28 +27,28 @@ def get_building_height(row, default_height=10):
     return default_height
 
 def create_solid_base(target_size, base_thickness=2):
-    #resize base so enough room for buildings
-    #base_size = target_size * 1.2 
+    base_size = target_size * 1.2  # Increase the base size by 20%
+
     # Define vertices for the base (solid block)
     base_vertices = [
         (0, 0, 0),  # Bottom face
-        (target_size, 0, 0),
-        (target_size, target_size, 0),
-        (0, target_size, 0),
+        (base_size, 0, 0),
+        (base_size, base_size, 0),
+        (0, base_size, 0),
         (0, 0, base_thickness),  # Top face (where buildings will sit)
-        (target_size, 0, base_thickness),
-        (target_size, target_size, base_thickness),
-        (0, target_size, base_thickness)
+        (base_size, 0, base_thickness),
+        (base_size, base_size, base_thickness),
+        (0, base_size, base_thickness)
     ]
 
-    # Define faces for the base (solid block)
+    # Define faces for the base
     base_faces = [
-        [0, 1, 2], [0, 2, 3],  # Bottom face
-        [4, 5, 6], [4, 6, 7],  # Top face
-        [0, 1, 5], [0, 5, 4],  # Side faces
+        [0, 1, 5], [0, 5, 4],  # Sides
         [1, 2, 6], [1, 6, 5],
         [2, 3, 7], [2, 7, 6],
-        [3, 0, 4], [3, 4, 7]
+        [3, 0, 4], [3, 4, 7],
+        [4, 5, 6], [4, 6, 7],  # Top face
+        [0, 1, 2], [0, 2, 3]   # Bottom face
     ]
 
     return base_vertices, base_faces
@@ -61,23 +61,22 @@ def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_heig
     scale_x = target_size / lon_range
     scale_y = target_size / lat_range
 
-    # Calculate maximum building height
+    # Calculate the maximum building height
     max_building_height = gdf.apply(lambda row: get_building_height(row, default_height), axis=1).max()
     height_scale = max_height_mm / max_building_height
+
+    # Increase the base size by 20%
+    base_size = target_size * 1.2
+    center_offset_x = (base_size - target_size) / 2
+    center_offset_y = (base_size - target_size) / 2
 
     vertices = []
     faces = []
 
     # Generate the solid base
     base_vertices, base_faces = create_solid_base(target_size, base_thickness)
-
-    # Add the base vertices and faces to the overall mesh
     vertices.extend(base_vertices)
     faces.extend(base_faces)
-
-    # Calculate center offsets
-    center_x = target_size / 2
-    center_y = target_size / 2
 
     for idx, row in gdf.iterrows():
         polygon = row['geometry']
@@ -89,14 +88,19 @@ def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_heig
             height = get_building_height(row, default_height) * height_scale
             print(f"Building at index {idx} with coordinates {exterior_coords} has height {height}")
 
-            # Create vertices
+            # Create vertices for the building
             for coord in exterior_coords:
-                v_bottom = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, base_thickness)
-                v_top = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, base_thickness + height)
-                # Center buildings on the base
-                v_bottom = (v_bottom[0] + (center_x - (target_size / 2)), v_bottom[1] + (center_y - (target_size / 2)), v_bottom[2])
-                v_top = (v_top[0] + (center_x - (target_size / 2)), v_top[1] + (center_y - (target_size / 2)), v_top[2])
-                
+                v_bottom = (
+                    (coord[0] - west) * scale_x + center_offset_x, 
+                    (coord[1] - south) * scale_y + center_offset_y, 
+                    base_thickness
+                )
+                v_top = (
+                    (coord[0] - west) * scale_x + center_offset_x, 
+                    (coord[1] - south) * scale_y + center_offset_y, 
+                    height + base_thickness
+                )
+
                 vertices.extend([v_bottom, v_top])
 
             # Create side faces
