@@ -53,3 +53,8 @@ Here's a sample of Manhatten, New York:
 ![image](https://github.com/user-attachments/assets/133c14f6-c28a-405a-aff1-3ff5dd9de01e)
 
 
+## Acknowledgments
+Special thanks to ChatGPT by OpenAI for assisting in the development of the codebase.
+
+
+
