@@ -4,10 +4,8 @@ import numpy as np
 from stl import mesh
 
 def fetch_building_data(bbox):
-    # Define the bounding box (north, south, east, west)
-    north, south, east, west = bbox
     # Fetch building footprints within the bounding box
-    gdf = ox.geometries_from_bbox(north, south, east, west, tags={'building': True})
+    gdf = ox.geometries_from_bbox(*bbox, tags={'building': True})
     return gdf
 
 def get_building_height(row, default_height=10):
@@ -29,24 +27,24 @@ def get_building_height(row, default_height=10):
     return default_height
 
 def create_solid_base(target_size, base_thickness=2):
-    base_size = target_size * 1.2  # Make the base slightly larger than the building area
-
-    # Define vertices for the top and bottom of the base
+    #resize base so enough room for buildings
+    #base_size = target_size * 1.2 
+    # Define vertices for the base (solid block)
     base_vertices = [
         (0, 0, 0),  # Bottom face
-        (base_size, 0, 0),
-        (base_size, base_size, 0),
-        (0, base_size, 0),
-        (0, 0, -base_thickness),  # Top face (bottom of base)
-        (base_size, 0, -base_thickness),
-        (base_size, base_size, -base_thickness),
-        (0, base_size, -base_thickness)
+        (target_size, 0, 0),
+        (target_size, target_size, 0),
+        (0, target_size, 0),
+        (0, 0, base_thickness),  # Top face (where buildings will sit)
+        (target_size, 0, base_thickness),
+        (target_size, target_size, base_thickness),
+        (0, target_size, base_thickness)
     ]
 
-    # Define faces for the base
+    # Define faces for the base (solid block)
     base_faces = [
-        [0, 1, 2], [0, 2, 3],  # Top face (aligns with the bottom of the buildings)
-        [4, 5, 6], [4, 6, 7],  # Bottom face
+        [0, 1, 2], [0, 2, 3],  # Bottom face
+        [4, 5, 6], [4, 6, 7],  # Top face
         [0, 1, 5], [0, 5, 4],  # Side faces
         [1, 2, 6], [1, 6, 5],
         [2, 3, 7], [2, 7, 6],
@@ -54,7 +52,6 @@ def create_solid_base(target_size, base_thickness=2):
     ]
 
     return base_vertices, base_faces
-
 
 def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_height=10, base_thickness=2):
     # Calculate the scale factors for x and y dimensions
@@ -74,13 +71,13 @@ def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_heig
     # Generate the solid base
     base_vertices, base_faces = create_solid_base(target_size, base_thickness)
 
-    # Create the base plane vertices and faces
-    vertices = base_vertices.copy()
-    faces = base_faces.copy()
-    
+    # Add the base vertices and faces to the overall mesh
+    vertices.extend(base_vertices)
+    faces.extend(base_faces)
+
     # Calculate center offsets
-    center_x = target_size * 1.2 / 2
-    center_y = target_size * 1.2 / 2
+    center_x = target_size / 2
+    center_y = target_size / 2
 
     for idx, row in gdf.iterrows():
         polygon = row['geometry']
@@ -94,8 +91,8 @@ def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_heig
 
             # Create vertices
             for coord in exterior_coords:
-                v_bottom = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, -base_thickness)
-                v_top = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, height - base_thickness)
+                v_bottom = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, base_thickness)
+                v_top = ((coord[0] - west) * scale_x, (coord[1] - south) * scale_y, base_thickness + height)
                 # Center buildings on the base
                 v_bottom = (v_bottom[0] + (center_x - (target_size / 2)), v_bottom[1] + (center_y - (target_size / 2)), v_bottom[2])
                 v_top = (v_top[0] + (center_x - (target_size / 2)), v_top[1] + (center_y - (target_size / 2)), v_top[2])
@@ -117,7 +114,7 @@ def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_heig
             for i in range(1, len(top_face_indices) - 1):
                 faces.append([top_face_indices[0], top_face_indices[i], top_face_indices[i + 1]])
 
-            # Create bottom face
+            # Create bottom face (this was omitted in the previous version)
             bottom_face_indices = [base_index + 2 * i for i in range(len(exterior_coords) - 1)]
             for i in range(1, len(bottom_face_indices) - 1):
                 faces.append([bottom_face_indices[0], bottom_face_indices[i], bottom_face_indices[i + 1]])
@@ -125,9 +122,6 @@ def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_heig
     vertices = np.array(vertices)
     faces = np.array(faces)
 
-    # adjust buildings to base thickness
-    vertices[:, 2] -= base_thickness 
-    # Embed one forth into the base    
     return vertices, faces
 
 def save_to_stl(vertices, faces, filename):
@@ -142,7 +136,7 @@ def main():
     bbox = (37.8049, 37.7749, -122.3894, -122.4194)  # San Francisco example
     gdf = fetch_building_data(bbox)
     vertices, faces = scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_height=40, base_thickness=2)
-    save_to_stl(vertices, faces, 'buildings.stl')
+    save_to_stl(vertices, faces, 'buildings_with_base.stl')
 
 if __name__ == "__main__":
     main()
