@@ -4,8 +4,10 @@ import numpy as np
 from stl import mesh
 
 def fetch_building_data(bbox):
+    north_lat, north_lng, south_lat, south_lng = bbox
+
     # Fetch building footprints within the bounding box
-    gdf = ox.geometries_from_bbox(*bbox, tags={'building': True})
+    gdf = ox.geometries_from_bbox(north_lat, south_lat, north_lng, south_lng, tags={'building': True})
     return gdf
 
 def get_building_height(row, default_height=10):
@@ -55,10 +57,10 @@ def create_solid_base(target_size, base_thickness=2):
 
 def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_height=10, base_thickness=2):
     # Calculate the scale factors for x and y dimensions
-    north, south, east, west = bbox
-    lat_range = north - south
-    lon_range = east - west
-    scale_x = target_size / lon_range
+    north_lat, north_lng, south_lat, south_lng = bbox
+    lat_range = north_lat - south_lat
+    lng_range = north_lng - south_lng
+    scale_x = target_size / lng_range
     scale_y = target_size / lat_range
 
     # Calculate the maximum building height
@@ -137,7 +139,7 @@ def save_to_stl(vertices, faces, filename):
 
 def main():
     # Example bounding box: (north, south, east, west)
-    bbox = (37.8049, 37.7749, -122.3894, -122.4194)  # San Francisco example
+    bbox = (37.8049, -122.3894, 37.7749, -122.4194)  # (north_lat, north_lng, south_lat, south_lng)
     gdf = fetch_building_data(bbox)
     vertices, faces = scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_height=40, base_thickness=2)
     save_to_stl(vertices, faces, 'buildings_with_base.stl')
