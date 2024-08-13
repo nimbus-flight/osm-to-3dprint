@@ -29,9 +29,7 @@ def get_building_height(row, default_height=10):
                     continue
     return default_height
 
-def create_solid_base(target_size, base_thickness=2):
-    base_size = target_size * 1.2  # Increase the base size by 20%
-
+def create_solid_base(base_size, base_thickness=2):
     # Define vertices for the base (solid block)
     base_vertices = [
         (0, 0, 0),  # Bottom face
@@ -63,25 +61,29 @@ def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_heig
     # Calculate the scale factors for x and y dimensions
     lat_range = north_lat - south_lat
     lng_range = north_lng - south_lng
+
+    # Define the base size as 20% larger than the target area
+    base_size = target_size * 1.2    
+
+    # Calculate scaling factors based on the larger base
     scale_x = target_size / lng_range
     scale_y = target_size / lat_range
 
-    # Calculate the maximum building height
-    max_building_height = gdf.apply(lambda row: get_building_height(row, default_height), axis=1).max()
-    height_scale = max_height_mm / max_building_height
-
-    # Increase the base size by 20%
-    base_size = target_size * 1.2
-    center_offset_x = (base_size - target_size) / 2
-    center_offset_y = (base_size - target_size) / 2
+    # Calculate offsets to center the buildings on the enlarged base
+    center_offset_x = (base_size - (scale_x * lng_range)) / 2
+    center_offset_y = (base_size - (scale_y * lat_range)) / 2
 
     vertices = []
     faces = []
 
-    # Generate the solid base
-    base_vertices, base_faces = create_solid_base(target_size, base_thickness)
+    # Generate and append solid base
+    base_vertices, base_faces = create_solid_base(base_size, base_thickness)
     vertices.extend(base_vertices)
     faces.extend(base_faces)
+
+    # Calculate the maximum building height
+    max_building_height = gdf.apply(lambda row: get_building_height(row, default_height), axis=1).max()
+    height_scale = max_height_mm / max_building_height
 
     for idx, row in gdf.iterrows():
         polygon = row['geometry']
@@ -89,15 +91,13 @@ def scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_heig
             exterior_coords = list(polygon.exterior.coords)
             base_index = len(vertices)
 
-            # Determine height and scale it
-            height = get_building_height(row, default_height) * height_scale
-            print(f"Building at index {idx} with coordinates {exterior_coords} has height {height}")
-
             # Create vertices for the building
             for coord in exterior_coords:
-            # Adjust coordinates correctly based on actual min/max lng and lat
-                x = ((coord[0] - south_lng) / lng_range) * base_size  # Scale and position
-                y = ((coord[1] - south_lat) / lat_range) * base_size  # Scale and position
+                x = ((coord[0] - south_lng) * scale_x) + center_offset_x
+                y = ((coord[1] - south_lat) * scale_y) + center_offset_y
+                height = get_building_height(row, default_height) * height_scale
+                print(f"Building at index {idx} with coordinates {exterior_coords} has height {height}")
+
                 v_bottom = (x, y, base_thickness)
                 v_top = (x, y, height + base_thickness)
                 vertices.extend([v_bottom, v_top])
@@ -136,7 +136,7 @@ def save_to_stl(vertices, faces, filename):
 
 def main():
     #bbox = (37.8049, -122.3894, 37.7749, -122.4194)  # (north_lat, north_lng, south_lat, south_lng) #san francisco example
-    bbox = (33.753296, -84.402845,33.767759, -84.381932) #atlanta example
+    bbox = (33.767759, -84.381932, 33.753296, -84.402845) #atlanta example
     gdf = fetch_building_data(bbox)
     vertices, faces = scale_coordinates(gdf, bbox, target_size=180, max_height_mm=40, default_height=40, base_thickness=2)
     save_to_stl(vertices, faces, 'buildings_with_base.stl')
